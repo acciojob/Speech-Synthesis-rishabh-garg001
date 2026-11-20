@@ -99,73 +99,88 @@
       <button id="speak">Speak</button>
     </div>
   </div>
-
 <script>
-  const msg = new SpeechSynthesisUtterance();
-  let voices = [];
-  const voicesDropdown = document.querySelector('[name="voice"]');
-  const options = document.querySelectorAll('[type="range"], [name="text"]');
+  const synth = window.speechSynthesis;
+  const voicesDropdown = document.querySelector('#voices');
+  const rateInput = document.querySelector('#rate');
+  const pitchInput = document.querySelector('#pitch');
+  const textInput = document.querySelector('#text');
   const speakButton = document.querySelector('#speak');
   const stopButton = document.querySelector('#stop');
   const message = document.querySelector('#message');
 
-  msg.text = document.querySelector('[name="text"]').value;
+  let voices = [];
 
-  // Voices load karke dropdown bharo
+  // 1. Voices load karke dropdown mein daalo
   function populateVoices() {
-    voices = speechSynthesis.getVoices();
+    voices = synth.getVoices();
 
-    if (voices.length === 0) {
+    if (!voices || voices.length === 0) {
       message.textContent = 'No voices available in this browser.';
       return;
     }
 
     message.textContent = '';
-    voicesDropdown.innerHTML = voices
-      .map(voice => `<option value="${voice.name}">${voice.name} (${voice.lang})</option>`)
-      .join('');
-    msg.voice = voices[0];
+    const selected = voicesDropdown.value;
+    voicesDropdown.innerHTML = '';
+
+    voices.forEach(function (voice) {
+      const option = document.createElement('option');
+      option.value = voice.name;
+      option.textContent = voice.name + ' (' + voice.lang + ')';
+      voicesDropdown.appendChild(option);
+    });
+
+    if (selected) voicesDropdown.value = selected;
   }
 
-  // Voice badlo
-  function setVoice() {
-    msg.voice = voices.find(voice => voice.name === this.value);
-    toggle(); // bolte waqt voice badli to nayi voice se dobara shuru karo
-  }
-
-  // Speech band karke dobara shuru karo
-  function toggle(startOver = true) {
-    speechSynthesis.cancel();
-    if (startOver && msg.text.trim() !== '') {
-      speechSynthesis.speak(msg);
-    }
-  }
-
-  // Rate, pitch aur text update karo
-  function setOption() {
-    msg[this.name] = this.value;
-  }
-
-  // Speak button
+  // 2. Har baar nayi utterance banao (current text, voice, rate, pitch ke saath)
   function speak() {
-    msg.text = document.querySelector('[name="text"]').value;
-    msg.rate = document.querySelector('[name="rate"]').value;
-    msg.pitch = document.querySelector('[name="pitch"]').value;
+    const text = textInput.value.trim();
 
-    if (msg.text.trim() === '') {
+    if (text === '') {
       message.textContent = 'Please enter some text to speak.';
       return;
     }
     message.textContent = '';
-    toggle();
+
+    synth.cancel(); // pehle wali speech band
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    const selectedVoice = voices.find(v => v.name === voicesDropdown.value);
+    if (selectedVoice) utterance.voice = selectedVoice;
+    utterance.rate = parseFloat(rateInput.value);
+    utterance.pitch = parseFloat(pitchInput.value);
+
+    synth.speak(utterance);
   }
 
+  // 3. Stop
+  function stop() {
+    synth.cancel();
+  }
+
+  // 4. Voice / rate / pitch badle aur speech chal rahi ho to nayi setting se restart
+  function restartIfSpeaking() {
+    if (synth.speaking) {
+      speak();
+    }
+  }
+
+  // Voices kabhi turant, kabhi baad mein load hoti hain
   populateVoices();
-  speechSynthesis.addEventListener('voiceschanged', populateVoices);
-  voicesDropdown.addEventListener('change', setVoice);
-  options.forEach(option => option.addEventListener('change', setOption));
+  if (synth.onvoiceschanged !== undefined) {
+    synth.onvoiceschanged = populateVoices;
+  }
+  setTimeout(populateVoices, 500);
+
   speakButton.addEventListener('click', speak);
-  stopButton.addEventListener('click', () => toggle(false));
+  stopButton.addEventListener('click', stop);
+  voicesDropdown.addEventListener('change', restartIfSpeaking);
+  rateInput.addEventListener('input', restartIfSpeaking);
+  rateInput.addEventListener('change', restartIfSpeaking);
+  pitchInput.addEventListener('input', restartIfSpeaking);
+  pitchInput.addEventListener('change', restartIfSpeaking);
 </script>
 
 </body>
