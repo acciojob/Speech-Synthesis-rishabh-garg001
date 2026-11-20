@@ -102,82 +102,60 @@
 <script>
   const msg = new SpeechSynthesisUtterance();
   let voices = [];
-
-  const voicesDropdown = document.querySelector('#voices');
-  const rateInput = document.querySelector('#rate');
-  const pitchInput = document.querySelector('#pitch');
-  const textInput = document.querySelector('#text');
+  const voicesDropdown = document.querySelector('[name="voice"]');
+  const options = document.querySelectorAll('[type="range"], [name="text"]');
   const speakButton = document.querySelector('#speak');
   const stopButton = document.querySelector('#stop');
   const message = document.querySelector('#message');
 
-  msg.text = textInput.value;
-  msg.rate = rateInput.value;
-  msg.pitch = pitchInput.value;
+  msg.text = document.querySelector('[name="text"]').value;
 
   // Voices dropdown mein daalo
   function populateVoices() {
-    voices = window.speechSynthesis.getVoices();
+    voices = speechSynthesis.getVoices();
 
     if (voices.length === 0) {
-      message.textContent = 'No voices available in this browser.';
+      message.textContent = 'No voices available.';
       return;
     }
-
     message.textContent = '';
+
     voicesDropdown.innerHTML = voices
       .map(voice => `<option value="${voice.name}">${voice.name} (${voice.lang})</option>`)
       .join('');
     msg.voice = voices[0];
   }
 
-  // Speak: text bolna shuru karo
-  function speak() {
-    msg.text = textInput.value;
-    msg.rate = rateInput.value;
-    msg.pitch = pitchInput.value;
-
-    if (msg.text.trim() === '') {
-      message.textContent = 'Please enter some text to speak.';
-      return;
-    }
-    message.textContent = '';
-
-    window.speechSynthesis.cancel();   // purani speech band
-    window.speechSynthesis.speak(msg); // nayi speech shuru
-  }
-
-  // Stop: speech turant band
-  function stop() {
-    window.speechSynthesis.cancel();
-  }
-
-  // Voice badli: nayi voice se dobara bolo
+  // Voice badlo aur dobara bolo
   function setVoice() {
     msg.voice = voices.find(voice => voice.name === this.value);
-    speak();
+    toggle();
   }
 
-  // Rate slider: nayi speed set karke dobara bolo
-  function setRate() {
-    msg.rate = rateInput.value;
-    speak();
+  // Speech band karo, aur startOver true ho to dobara shuru karo
+  function toggle(startOver = true) {
+    speechSynthesis.cancel();
+    if (startOver) {
+      if (msg.text.trim() === '') {
+        message.textContent = 'Please enter some text.';
+        return;
+      }
+      speechSynthesis.speak(msg);
+    }
   }
 
-  // Pitch slider: naya tone set karke dobara bolo
-  function setPitch() {
-    msg.pitch = pitchInput.value;
-    speak();
+  // Rate, pitch, text: msg.rate / msg.pitch / msg.text set karke dobara bolo
+  function setOption() {
+    msg[this.name] = this.value;
+    toggle();
   }
 
   populateVoices();
-  window.speechSynthesis.addEventListener('voiceschanged', populateVoices);
-
+  speechSynthesis.addEventListener('voiceschanged', populateVoices);
   voicesDropdown.addEventListener('change', setVoice);
-  rateInput.addEventListener('change', setRate);
-  pitchInput.addEventListener('change', setPitch);
-  speakButton.addEventListener('click', speak);
-  stopButton.addEventListener('click', stop);
+  options.forEach(option => option.addEventListener('change', setOption));
+  speakButton.addEventListener('click', toggle);
+  stopButton.addEventListener('click', () => toggle(false));
 </script>
 
 </body>
