@@ -3,30 +3,102 @@
 <head>
   <meta charset="UTF-8">
   <title>Speech Synthesis</title>
-  <link href='https://fonts.googleapis.com/css?family=Pacifico' rel='stylesheet' type='text/css'>
   <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #3BC1AC;
+      font-family: sans-serif;
+    }
+    .voiceinator {
+      width: 50rem;
+      max-width: 95%;
+      background: white;
+      border-radius: 1rem;
+      overflow: hidden;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+      padding-bottom: 2rem;
+    }
+    h1 {
+      background: #ffc600;
+      margin: 0 0 2rem 0;
+      padding: 1.5rem;
+      text-align: center;
+      font-size: 3rem;
+      font-family: cursive;
+    }
+    .voiceinator select,
+    .voiceinator input,
+    .voiceinator textarea,
+    .voiceinator button {
+      display: block;
+      width: calc(100% - 4rem);
+      margin: 1rem 2rem;
+      box-sizing: border-box;
+      font-size: 1.2rem;
+    }
+    .voiceinator select,
+    .voiceinator textarea {
+      background: #f7f7f7;
+      border: 0;
+      padding: 1rem;
+    }
+    .voiceinator textarea {
+      height: 15rem;
+      font-family: monospace;
+    }
+    .voiceinator label {
+      display: block;
+      margin: 0 2rem;
+      font-size: 0.9rem;
+    }
+    .buttons {
+      display: flex;
+      margin: 0 2rem;
+      gap: 1rem;
+    }
+    .buttons button {
+      width: 50%;
+      margin: 0;
+      padding: 1.5rem;
+      background: #ffc600;
+      border: 0;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #message {
+      color: red;
+      margin: 0 2rem;
+    }
+  </style>
 </head>
 <body>
 
-    <div class="voiceinator">
+  <div class="voiceinator">
+    <h1>The Voiceinator 5000</h1>
 
-      <h1>The Voiceinator 5000</h1>
+    <select name="voice" id="voices">
+      <option value="">Select A Voice</option>
+    </select>
+    <p id="message"></p>
 
-      <select name="voice" id="voices">
-        <option value="">Select A Voice</option>
-      </select>
+    <label for="rate">Rate:</label>
+    <input name="rate" id="rate" type="range" min="0" max="3" value="1" step="0.1">
 
-      <label for="rate">Rate:</label>
-      <input name="rate" type="range" min="0" max="3" value="1" step="0.1">
+    <label for="pitch">Pitch:</label>
+    <input name="pitch" id="pitch" type="range" min="0" max="2" value="1" step="0.1">
 
-      <label for="pitch">Pitch:</label>
+    <textarea name="text" id="text">Hello! I love JavaScript 👍</textarea>
 
-      <input name="pitch" type="range" min="0" max="2" step="0.1">
-      <textarea name="text">Hello! I love JavaScript 👍</textarea>
+    <div class="buttons">
       <button id="stop">Stop!</button>
       <button id="speak">Speak</button>
-
     </div>
+  </div>
 
 <script>
   const msg = new SpeechSynthesisUtterance();
@@ -35,8 +107,65 @@
   const options = document.querySelectorAll('[type="range"], [name="text"]');
   const speakButton = document.querySelector('#speak');
   const stopButton = document.querySelector('#stop');
+  const message = document.querySelector('#message');
 
-  //Your code goes here
+  msg.text = document.querySelector('[name="text"]').value;
+
+  // Voices load karke dropdown bharo
+  function populateVoices() {
+    voices = speechSynthesis.getVoices();
+
+    if (voices.length === 0) {
+      message.textContent = 'No voices available in this browser.';
+      return;
+    }
+
+    message.textContent = '';
+    voicesDropdown.innerHTML = voices
+      .map(voice => `<option value="${voice.name}">${voice.name} (${voice.lang})</option>`)
+      .join('');
+    msg.voice = voices[0];
+  }
+
+  // Voice badlo
+  function setVoice() {
+    msg.voice = voices.find(voice => voice.name === this.value);
+    toggle(); // bolte waqt voice badli to nayi voice se dobara shuru karo
+  }
+
+  // Speech band karke dobara shuru karo
+  function toggle(startOver = true) {
+    speechSynthesis.cancel();
+    if (startOver && msg.text.trim() !== '') {
+      speechSynthesis.speak(msg);
+    }
+  }
+
+  // Rate, pitch aur text update karo
+  function setOption() {
+    msg[this.name] = this.value;
+  }
+
+  // Speak button
+  function speak() {
+    msg.text = document.querySelector('[name="text"]').value;
+    msg.rate = document.querySelector('[name="rate"]').value;
+    msg.pitch = document.querySelector('[name="pitch"]').value;
+
+    if (msg.text.trim() === '') {
+      message.textContent = 'Please enter some text to speak.';
+      return;
+    }
+    message.textContent = '';
+    toggle();
+  }
+
+  populateVoices();
+  speechSynthesis.addEventListener('voiceschanged', populateVoices);
+  voicesDropdown.addEventListener('change', setVoice);
+  options.forEach(option => option.addEventListener('change', setOption));
+  speakButton.addEventListener('click', speak);
+  stopButton.addEventListener('click', () => toggle(false));
 </script>
 
 </body>
