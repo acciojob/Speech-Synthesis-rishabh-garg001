@@ -101,6 +101,7 @@
   </div>
 <script>
   const synth = window.speechSynthesis;
+  const msg = new SpeechSynthesisUtterance();
   const voicesDropdown = document.querySelector('#voices');
   const rateInput = document.querySelector('#rate');
   const pitchInput = document.querySelector('#pitch');
@@ -111,7 +112,12 @@
 
   let voices = [];
 
-  // 1. Voices load karke dropdown mein daalo
+  // Shuruaati settings
+  msg.text = textInput.value;
+  msg.rate = parseFloat(rateInput.value);
+  msg.pitch = parseFloat(pitchInput.value);
+
+  // 1. Voices dropdown mein daalo
   function populateVoices() {
     voices = synth.getVoices();
 
@@ -132,55 +138,62 @@
     });
 
     if (selected) voicesDropdown.value = selected;
+    msg.voice = voices.find(v => v.name === voicesDropdown.value) || voices[0];
   }
 
-  // 2. Har baar nayi utterance banao (current text, voice, rate, pitch ke saath)
-  function speak() {
-    const text = textInput.value.trim();
-
-    if (text === '') {
-      message.textContent = 'Please enter some text to speak.';
-      return;
-    }
-    message.textContent = '';
-
-    synth.cancel(); // pehle wali speech band
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    const selectedVoice = voices.find(v => v.name === voicesDropdown.value);
-    if (selectedVoice) utterance.voice = selectedVoice;
-    utterance.rate = parseFloat(rateInput.value);
-    utterance.pitch = parseFloat(pitchInput.value);
-
-    synth.speak(utterance);
-  }
-
-  // 3. Stop
-  function stop() {
+  // 2. Speech band karke (zarurat ho to) dobara shuru karo
+  function toggle(startOver = true) {
     synth.cancel();
-  }
-
-  // 4. Voice / rate / pitch badle aur speech chal rahi ho to nayi setting se restart
-  function restartIfSpeaking() {
-    if (synth.speaking) {
-      speak();
+    if (startOver) {
+      if (msg.text.trim() === '') {
+        message.textContent = 'Please enter some text to speak.';
+        return;
+      }
+      message.textContent = '';
+      synth.speak(msg);
     }
   }
 
-  // Voices kabhi turant, kabhi baad mein load hoti hain
-  populateVoices();
-  if (synth.onvoiceschanged !== undefined) {
-    synth.onvoiceschanged = populateVoices;
+  // 3. Voice badli
+  function setVoice() {
+    msg.voice = voices.find(v => v.name === this.value);
+    if (synth.speaking) toggle();
   }
+
+  // 4. Rate / pitch / text badla: msg turant update karo
+  function setOption() {
+    if (this.name === 'rate' || this.name === 'pitch') {
+      msg[this.name] = parseFloat(this.value);
+    } else {
+      msg[this.name] = this.value;
+    }
+    if (synth.speaking) toggle(); // bolte waqt nayi rate/pitch se restart
+  }
+
+  // 5. Speak
+  function speak() {
+    msg.text = textInput.value;
+    msg.rate = parseFloat(rateInput.value);
+    msg.pitch = parseFloat(pitchInput.value);
+    toggle();
+  }
+
+  // 6. Stop
+  function stop() {
+    toggle(false);
+  }
+
+  populateVoices();
+  synth.addEventListener('voiceschanged', populateVoices);
   setTimeout(populateVoices, 500);
 
+  voicesDropdown.addEventListener('change', setVoice);
+  [rateInput, pitchInput, textInput].forEach(function (option) {
+    option.addEventListener('change', setOption);
+    option.addEventListener('input', setOption);
+  });
   speakButton.addEventListener('click', speak);
   stopButton.addEventListener('click', stop);
-  voicesDropdown.addEventListener('change', restartIfSpeaking);
-  rateInput.addEventListener('input', restartIfSpeaking);
-  rateInput.addEventListener('change', restartIfSpeaking);
-  pitchInput.addEventListener('input', restartIfSpeaking);
-  pitchInput.addEventListener('change', restartIfSpeaking);
 </script>
 
 </body>
